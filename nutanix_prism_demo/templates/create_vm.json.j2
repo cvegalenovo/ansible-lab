@@ -7,33 +7,39 @@
         "num_vcpus_per_socket": {{ num_of_cpu }},
         "num_sockets": 1,
         "memory_size_mib": {{ memory_mb }},
-        "disk_list": [{
-            "device_properties": {
-                "device_type": "DISK",
-                "disk_address": {
-                    "device_index": 0,
-                    "adapter_type": "SATA"
-                }
+        "disk_list": [
+            {
+                "device_properties": {
+                    "device_type": "DISK",
+                    "disk_address": {
+                        "device_index": 0,
+                        "adapter_type": "SATA"
+                        }
+                },
+                "data_source_reference": {
+                    "kind": "image",
+                    "uuid": "{{ golden_image.json.entities[0].metadata.uuid }}"
+                },
             },
-            "data_source_reference": {
-                "kind": "image",
-                "uuid": "{{ golden_image.json.entities[0].metadata.uuid }}"
+            {
+                "device_properties": {
+                    "device_type": "CDROM",
+                    "disk_address": {
+                        "device_index": 1,
+                        "adapter_type": "SATA"
+                        }
+                    }
             },
-            "device_properties": {
-                "device_type": "CDROM",
-                "disk_address": {
-                    "device_index": 1,
-                    "adapter_type": "SATA"
-                }
-            },
-            "device_properties": {
-                "device_type": "CDROM",
-                "disk_address": {
-                    "device_index": 2,
-                    "adapter_type": "SATA"
-                }
+            {
+                "device_properties": {
+                    "device_type": "CDROM",
+                    "disk_address": {
+                        "device_index": 1,
+                        "adapter_type": "SATA"
+                        }
+                    }
             }
-        }],
+        ],
         "nic_list": [{
             "nic_type": "NORMAL_NIC",
             "is_connected":true,
