@@ -1,13 +1,20 @@
 ---
-# Archivo: vm_clone_from_template.yml
 - name: Clone VM from Nutanix Template
   hosts: localhost
   gather_facts: false
 
   vars:
-    vm_template_name: "{{ template_name }}"
+    vm_template_name: "{{ template_name }}"  # Ej: rhel9.6
+    prism: "{{ prism_ip }}"                  # Ej: prism-central.ntnx.labs
+    prism_user: "{{ prism_username }}"       # Ej: admin
+    prism_password: "{{ prism_password }}"   # Ej: P4$$w0rd
+    vm_name: "{{ new_vm_name }}"             # Ej: cloned-vm-01
+    num_of_cpu: 2
+    memory_mb: 4096
+    subnet_name: "{{ target_subnet }}"       # Ej: VLAN110
 
   tasks:
+
     - name: Get list of all VMs (including templates)
       uri:
         url: "https://{{ prism }}:9440/api/nutanix/v3/vms/list"
@@ -16,8 +23,8 @@
         password: "{{ prism_password }}"
         body:
           kind: "vm"
-          offset: 0
           length: 100
+          offset: 0
         body_format: json
         headers:
           Content-Type: application/json
@@ -26,17 +33,53 @@
         return_content: true
       register: vm_list_response
 
-    - name: Debug raw VM list to find correct keys
-      debug:
-        var: vm_list_response.json.entities
-
-    - name: Filter to find the template by name
+    - name: Filtrar la plantilla por nombre
       set_fact:
         matched_templates: "{{ vm_list_response.json.entities | selectattr('status.name', 'equalto', vm_template_name) | list }}"
+
+    - name: Validar que la plantilla exista
+      fail:
+        msg: "No se encontró ninguna VM con el nombre {{ vm_template_name }} en Prism Central."
+      when: matched_templates | length == 0
 
     - name: Set template UUID from matched result
       set_fact:
         template_uuid: "{{ matched_templates[0].metadata.uuid }}"
+
+    - name: Get subnet info
+      uri:
+        url: "https://{{ prism }}:9440/api/nutanix/v3/subnets/list"
+        method: POST
+        user: "{{ prism_user }}"
+        password: "{{ prism_password }}"
+        body:
+          kind: "subnet"
+          filter: "name=={{ subnet_name }}"
+          length: 1
+        body_format: json
+        headers:
+          Content-Type: application/json
+        validate_certs: no
+        return_content: true
+        force_basic_auth: yes
+      register: vm_subnet
+
+    - name: Get cluster info
+      uri:
+        url: "https://{{ prism }}:9440/api/nutanix/v3/clusters/list"
+        method: POST
+        user: "{{ prism_user }}"
+        password: "{{ prism_password }}"
+        body:
+          kind: "cluster"
+          length: 1
+        body_format: json
+        headers:
+          Content-Type: application/json
+        validate_certs: no
+        return_content: true
+        force_basic_auth: yes
+      register: cluster_info
 
     - name: Create clone request JSON file
       ansible.builtin.template:
@@ -46,36 +89,36 @@
     - name: Clone VM from Template
       uri:
         url: "https://{{ prism }}:9440/api/nutanix/v3/vms/clones"
+        method: POST
         user: "{{ prism_user }}"
         password: "{{ prism_password }}"
-        method: POST
-        body: "{{ lookup('file','clone_vm.json') }}"
-        force_basic_auth: yes
-        validate_certs: no
+        body: "{{ lookup('file', 'clone_vm.json') | from_json }}"
         body_format: json
         headers:
           Content-Type: application/json
-        status_code: 202
+        validate_certs: no
         return_content: true
+        force_basic_auth: yes
+        status_code: 202
       register: vm_clone_result
 
-    - name: Get VM Attributes (wait for IP assignment)
+    - name: Wait for VM IP assignment (retry loop)
       uri:
         url: "https://{{ prism }}:9440/api/nutanix/v3/vms/{{ vm_clone_result.json.metadata.uuid }}"
+        method: GET
         user: "{{ prism_user }}"
         password: "{{ prism_password }}"
-        method: GET
-        force_basic_auth: yes
-        validate_certs: no
         headers:
           Content-Type: application/json
+        validate_certs: no
         return_content: true
+        force_basic_auth: yes
       register: get_vm_attributes
       retries: 10
-      delay: 60
+      delay: 30
       until: get_vm_attributes.json.status.resources.nic_list[0].ip_endpoint_list[0].ip is defined
 
-    - name: Capture VM IP for subsequent workflow
+    - name: Save VM IP address to stats
       ansible.builtin.set_stats:
         data:
           vm_ip: "{{ get_vm_attributes.json.status.resources.nic_list[0].ip_endpoint_list[0].ip }}"
