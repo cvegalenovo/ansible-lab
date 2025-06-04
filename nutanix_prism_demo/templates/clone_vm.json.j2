@@ -1,11 +1,28 @@
 {
-  "api_version": "3.1.0",
-  "metadata": {
-    "kind": "vm"
-  },
   "spec": {
     "name": "{{ vm_name }}",
-    "description": "Cloned from template {{ template_name }}",
+    "description": "Cloned from template {{ vm_template_name }}",
+    "resources": {
+      "power_state": "ON",
+      "num_vcpus_per_socket": {{ num_of_cpu }},
+      "num_sockets": 1,
+      "memory_size_mib": {{ memory_mb }},
+      "nic_list": [
+        {
+          "nic_type": "NORMAL_NIC",
+          "is_connected": true,
+          "ip_endpoint_list": [
+            {
+              "ip_type": "DHCP"
+            }
+          ],
+          "subnet_reference": {
+            "kind": "subnet",
+            "uuid": "{{ vm_subnet.json.entities[0].metadata.uuid }}"
+          }
+        }
+      ]
+    },
     "cluster_reference": {
       "kind": "cluster",
       "uuid": "{{ cluster_info.json.entities[0].metadata.uuid }}"
@@ -13,23 +30,10 @@
     "source_vm_reference": {
       "kind": "vm",
       "uuid": "{{ template_uuid }}"
-    },
-    "resources": {
-      "power_state": "ON",
-      "num_vcpus_per_socket": {{ num_of_cpu }},
-      "num_sockets": 1,
-      "memory_size_mib": {{ memory_mb }},
-      "nic_list": [{
-        "nic_type": "NORMAL_NIC",
-        "is_connected": true,
-        "ip_endpoint_list": [{
-          "ip_type": "DHCP"
-        }],
-        "subnet_reference": {
-          "kind": "subnet",
-          "uuid": "{{ vm_subnet.json.entities[0].metadata.uuid }}"
-        }
-      }]
     }
+  },
+  "api_version": "3.1.0",
+  "metadata": {
+    "kind": "vm"
   }
 }
