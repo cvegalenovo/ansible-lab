@@ -88,7 +88,7 @@
 
     - name: Clone VM from Template
       uri:
-        url: "https://{{ prism }}:9440/api/nutanix/v3/vms/clones"
+        url: "https://{{ prism }}:9440/api/nutanix/v3/vms/clone"
         method: POST
         user: "{{ prism_user }}"
         password: "{{ prism_password }}"
