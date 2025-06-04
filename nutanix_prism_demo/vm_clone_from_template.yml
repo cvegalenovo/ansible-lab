@@ -9,7 +9,7 @@
         src: templates/get_template.json.j2
         dest: get_template.json
 
-    - name: Retrieve Information of Template VM
+    - name: Retrieve Template VM Info
       uri:
         url: "https://{{ prism }}:9440/api/nutanix/v3/vms/list"
         user: "{{ prism_user }}"
@@ -23,11 +23,10 @@
           Content-Type: application/json
         return_content: true
       register: template_vm
-      
+
     - name: Debug: Show raw output of template_vm
       debug:
-        var: template_vm.json
-
+        var: template_vm.json 
 
     - name: Create subnet query JSON file
       ansible.builtin.template:
