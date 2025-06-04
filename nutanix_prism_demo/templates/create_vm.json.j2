@@ -48,6 +48,14 @@
           }
         }
       ],
+      "boot_config": {
+        "boot_device": {
+          "disk_address": {
+            "device_index": 0,
+            "adapter_type": "SCSI"
+          }
+        }
+      },
       "guest_tools": {
         "nutanix_guest_tools": {
           "state": "ENABLED",
@@ -59,12 +67,6 @@
       "kind": "cluster",
       "name": "{{ cluster_name }}",
       "uuid": "{{ cluster_info.json.entities[0].metadata.uuid }}"
-    },
-    "boot_device": {
-      "disk_address": {
-        "device_index": 0,
-        "adapter_type": "SCSI"
-      }
     }
   },
   "api_version": "3.1.0",
