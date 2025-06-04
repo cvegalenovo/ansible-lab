@@ -23,6 +23,11 @@
           Content-Type: application/json
         return_content: true
       register: template_vm
+      
+    - name: Debug: Show raw output of template_vm
+      debug:
+        var: template_vm.json
+
 
     - name: Create subnet query JSON file
       ansible.builtin.template:
