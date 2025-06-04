@@ -1,0 +1,47 @@
+---
+- name: Clone VM from Nutanix Template
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Create clone request JSON file from template
+      ansible.builtin.template:
+        src: templates/clone_vm.json.j2
+        dest: clone_vm.json
+
+    - name: Clone VM from Template
+      uri:
+        url: "https://{{ prism }}:9440/api/nutanix/v3/vms/clones"
+        user: "{{ prism_user }}"
+        password: "{{ prism_password }}"
+        method: POST
+        body: "{{ lookup('file','clone_vm.json') }}"
+        force_basic_auth: yes
+        validate_certs: no
+        body_format: json
+        headers:
+          Content-Type: application/json
+        status_code: 202
+        return_content: true
+      register: vm_clone_result
+
+    - name: Get VM Attributes (wait for IP assignment)
+      uri:
+        url: "https://{{ prism }}:9440/api/nutanix/v3/vms/{{ vm_clone_result.json.metadata.uuid }}"
+        user: "{{ prism_user }}"
+        password: "{{ prism_password }}"
+        method: GET
+        force_basic_auth: yes
+        validate_certs: no
+        headers:
+          Content-Type: application/json
+        return_content: true
+      register: get_vm_attributes
+      retries: 10
+      delay: 60
+      until: get_vm_attributes.json.status.resources.nic_list[0].ip_endpoint_list[0].ip is defined
+
+    - name: Capture VM IP for subsequent workflow
+      ansible.builtin.set_stats:
+        data:
+          vm_ip: "{{ get_vm_attributes.json.status.resources.nic_list[0].ip_endpoint_list[0].ip }}"
