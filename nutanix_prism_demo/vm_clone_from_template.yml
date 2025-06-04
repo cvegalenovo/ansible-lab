@@ -9,20 +9,29 @@
         src: templates/get_template.json.j2
         dest: get_template.json
 
-    - name: Retrieve Information of Template VM
+    - name: Retrieve all VMs to find the matching template
       uri:
         url: "https://{{ prism }}:9440/api/nutanix/v3/vms/list"
         user: "{{ prism_user }}"
         password: "{{ prism_password }}"
         method: POST
-        body: "{{ lookup('file','get_template.json') }}"
-        force_basic_auth: yes
-        validate_certs: no
+        body:
+          kind: vm
+          offset: 0
+          length: 100
+        force_basic_auth: true
+        validate_certs: false
         body_format: json
         headers:
           Content-Type: application/json
         return_content: true
-      register: template_vm
+      register: vm_list_response
+    - name: Search for template UUID by name
+      set_fact:
+        template_uuid: >-
+          {{ (vm_list_response.json.entities | selectattr('status.name', 'equalto', template_name) | list).0.metadata.uuid }}
+
+
 
 
     - name: Create subnet query JSON file
